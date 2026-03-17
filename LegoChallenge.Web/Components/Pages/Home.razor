@@ -1,0 +1,114 @@
+@page "/"
+@rendermode InteractiveServer
+@inject LegoApiClient Api
+
+<PageTitle>Buildable Sets – brickfan35</PageTitle>
+
+<div class="page-header">
+    <h1>Buildable Sets</h1>
+    <p>Which sets can <strong>brickfan35</strong> build with their current inventory?</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-spinner">
+        <div class="spinner-border" role="status"></div>
+        <span>Loading inventory and sets…</span>
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_totalSets</div>
+                <div class="stat-label">Total sets in catalogue</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_buildable.Count</div>
+                <div class="stat-label">Sets brickfan35 can build</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_user?.BrickCount</div>
+                <div class="stat-label">Pieces in inventory</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-card">
+        <h5 class="fw-semibold mb-3">Buildable Sets</h5>
+        @if (_buildable.Count == 0)
+        {
+            <p class="text-muted">No sets can be built with the current inventory.</p>
+        }
+        else
+        {
+            @foreach (var s in _buildable)
+            {
+                <span class="set-badge">
+                    <span>@s.Name</span>
+                    <span class="set-num">@s.SetNumber</span>
+                </span>
+            }
+        }
+
+        <hr class="my-4" />
+        <h5 class="fw-semibold mb-3">Cannot Build</h5>
+        <div>
+            @foreach (var s in _cannotBuild)
+            {
+                <span class="set-badge" style="background:#f8f9fa; border-color:#dee2e6; color:#999;">
+                    <span>@s.Name</span>
+                    <span class="set-num">@s.SetNumber</span>
+                </span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private UserDetail? _user;
+    private List<SetDetail> _buildable = [];
+    private List<SetDetail> _cannotBuild = [];
+    private int _totalSets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var summary = await Api.GetUserByUsernameAsync("brickfan35");
+            _user = await Api.GetUserByIdAsync(summary!.Id);
+            var inventory = InventoryService.BuildInventoryLookup(_user!);
+
+            var sets = await Api.GetSetsAsync();
+            _totalSets = sets.Count;
+            var details = await Task.WhenAll(sets.Select(s => Api.GetSetByIdAsync(s.Id)));
+
+            foreach (var set in details.Where(s => s is not null).Select(s => s!))
+            {
+                if (InventoryService.CanBuildSet(set, inventory))
+                    _buildable.Add(set);
+                else
+                    _cannotBuild.Add(set);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

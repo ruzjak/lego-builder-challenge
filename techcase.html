@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <meta name="theme-color" content="#e03125">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" sizes="180x180" href="https://www.lego.com/lego-logo-180.png">
+    <link rel="icon" sizes="192x192" href="https://www.lego.com/lego-logo-192.png">
+    <link rel="icon" sizes="512x512" href="https://www.lego.com/lego-logo-512.png">
+    <link rel="apple-touch-icon" href="https://www.lego.com/lego-logo-512.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="https://www.lego.com/lego-logo-76.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="https://www.lego.com/lego-logo-120.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://www.lego.com/lego-logo-152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="https://www.lego.com/lego-logo-167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://www.lego.com/lego-logo-180.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="https://www.lego.com/lego-logo-192.png">
+    <link rel="apple-touch-startup-image" href="https://www.lego.com/lego-logo-512.png">
+    <title>LEGO Code Challenge</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+</head>
+
+<body class="w-full flex justify-center bg-white">
+    <article class="prose prose-red m-10">
+        <img class="h-16 mx-auto" src="https://assets.lego.com/logos/v4.5.0/brand-lego.svg" alt="LEGO">
+        <h1>Builder Catalogue Challenge</h1>
+        <p>
+            In our digital offerings we have a database of building sets that can be constructed by our
+            fans, and we have a related service where users can record their inventories of building
+            pieces digitally to track and compare their collections.
+        </p>
+        <p>
+            We now have a need for a service that lets our fans explore their existing collections and
+            assess what sets can be built from the pieces that they already own.
+        </p>
+        <h2>Your Task</h2>
+        <p>Your task is to answer the following question:</p>
+        <blockquote>
+            Which sets can the user <code>brickfan35</code> build with their exisiting inventory of
+            pieces?
+        </blockquote>
+        <p>
+            We expect you to write some code to answer this and be prepared to do a code review with us
+            during your interview. Use whichever language, platform or approach you best feels
+            demostrates your abilities.
+        </p>
+        <h2>Concepts</h2>
+        <p>
+            A piece is defined by a piece id (sometimes called a designId) that identifies the form the
+            piece takes, for example
+            <a href="https://www.bricklink.com/v2/catalog/catalogitem.page?P=3023">"3023"</a>
+            for a 1 x 2 Plate, and a
+            <a href="https://www.bricklink.com/catalogColors.asp?utm_content=subnav">colour code</a>
+            (sometimes referred to as the material id).
+        </p>
+        <p>
+            A set is comprised of a collection of pieces and may have pieces that occur more than once
+            and also appear in different colours. To build a complete set you need all of the pieces
+            listed in the correct quantities and colours. For example a set may consist of:
+        </p>
+        <ul>
+            <li>4 x part number 3023 in blue</li>
+            <li>2 x part number 4286 in red</li>
+            <li>1 x part number 4286 in white</li>
+        </ul>
+        <p>
+            Our users also track which pieces they own in an inventory system. We have a number of API
+            endpoints that expose both the sets that can be built and their piece requirements, and the
+            users' current inventories.
+        </p>
+        <h2>Available APIs</h2>
+        <p>An API is hosted at this domain and provides the following endpoints:</p>
+        <ul>
+            <li>
+                <p>
+                    <a href="/api/users">/api/users</a> returns a list of users in the catalogue
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/user/by-username/{username}">/api/user/by-username/{username}</a>
+                    returns a summary of a single user
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/user/by-id/{id}">/api/user/by-id/{id}</a> return the full data for a
+                    single user
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/sets">/api/sets</a> returns a list of the sets in the catalogue
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/set/by-name/{name}">/api/set/by-name/{name}</a>
+                    returns a summary of a single set
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/set/by-id/{id}">/api/set/by-id/{id}</a> returns the full data for a single
+                    set
+                </p>
+            </li>
+            <li>
+                <p>
+                    <a href="/api/colours">/api/colours</a> returns the full list of colours available
+                </p>
+            </li>
+        </ul>
+        <h2>Stretch goals</h2>
+        <p>
+            These are not neccesary to complete, but feel free to extend your solution to help these
+            users:
+        </p>
+        <ol>
+            <li>
+                <p>
+                    The user <code>landscape-artist</code> doesn't have the right pieces to build the set
+                    <code>tropical-island</code> but would like to collaborate with other users on the
+                    build. Which users could they combine their collection with to have the complete piece
+                    requirements for the build?
+                </p>
+            </li>
+            <li>
+                <p>
+                    The user <code>megabuilder99</code> is interested in creating a new custom build but
+                    they want to make sure other people could complete it with their current inventories.
+                    What is the largest collection of pieces they should restrict themselves to if they want
+                    to ensure that at least 50% of other users could complete the build?
+                </p>
+            </li>
+            <li>
+                <p>
+                    <strong>(HARD)</strong>
+                    The user <code>dr_crocodile</code> wants to expand the number of sets they can build
+                    with their current inventory and are prepared to be flexible on the colour scheme. They
+                    are happy to substitute any colour in a set as long as all the pieces of that colour are
+                    substituted, and that the new colour isn't used elsewhere in the set. For example, a
+                    building with white walls, a red roof and a green flag could be built with red walls, a
+                    blue roof and a green flag. What new sets can <code>dr_crocodile</code> build by
+                    allowing colour substitutions?
+                </p>
+            </li>
+        </ol>
+        <h2>Disclaimer</h2>
+        <p>
+            The interview case solution belongs to you, and we're very happy that you are using your
+            personal time to solve it and join us in interviews for the possibility of getting an
+            awesome job!
+        </p>
+        <p>
+            Although the solution is yours to share and showcase, we would like to remind you that the
+            company name, trademarks and trade names, including but not limited to the LEGO® logo and
+            word mark, is the exclusive property of the LEGO Group. Any reference to the "the LEGO
+            Group" requires use of capitalized letters as in this example, unless the format in which
+            the reference is made, requires lower case letters.
+        </p>
+        <p>
+            For more information please refer to our
+            <a href="https://www.lego.com/en-dk/legal/notices-and-policies/legal-notice">Notice</a>
+            and our
+            <a href="https://www.lego.com/en-dk/legal/notices-and-policies/fair-play/">Fair Play</a>.
+        </p>
+    </article>
+</body>
+
+</html>

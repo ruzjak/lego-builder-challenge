@@ -1,0 +1,156 @@
+@page "/colour-swap"
+@rendermode InteractiveServer
+@inject LegoApiClient Api
+
+<PageTitle>Colour Substitution – dr_crocodile</PageTitle>
+
+<div class="page-header">
+    <h1>Colour Substitution</h1>
+    <p>What new sets can <strong>dr_crocodile</strong> build by swapping colours?</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-spinner">
+        <div class="spinner-border" role="status"></div>
+        <span>Running bipartite colour matching…</span>
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_alreadyBuildable</div>
+                <div class="stat-label">Sets already buildable</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_newSets.Count</div>
+                <div class="stat-label">New sets via colour swap</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_impossible</div>
+                <div class="stat-label">Still not buildable</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="result-card">
+                <h5 class="fw-semibold mb-3">Newly unlocked sets</h5>
+                @if (_newSets.Count == 0)
+                {
+                    <p class="text-muted">No additional sets unlocked through colour substitution.</p>
+                }
+                else
+                {
+                    @foreach (var s in _newSets)
+                    {
+                        <span class="set-badge">
+                            <span>@s.Name</span>
+                            <span class="set-num">@s.SetNumber</span>
+                        </span>
+                    }
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="result-card">
+                <h5 class="fw-semibold mb-3">All sets breakdown</h5>
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Set</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _allSets)
+                        {
+                            <tr>
+                                <td>@row.Name</td>
+                                <td class="text-center">
+                                    @if (row.Status == "direct")
+                                    {
+                                        <span class="badge bg-success">Direct</span>
+                                    }
+                                    else if (row.Status == "swap")
+                                    {
+                                        <span class="badge bg-warning text-dark">Colour swap</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Not buildable</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private int _alreadyBuildable, _impossible;
+    private List<SetDetail> _newSets = [];
+    private List<(string Name, string Status)> _allSets = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var dcSummary = await Api.GetUserByUsernameAsync("dr_crocodile");
+            var dcUser = await Api.GetUserByIdAsync(dcSummary!.Id);
+            var dcInventory = InventoryService.BuildInventoryLookup(dcUser!);
+
+            var sets = await Api.GetSetsAsync();
+            var details = await Task.WhenAll(sets.Select(s => Api.GetSetByIdAsync(s.Id)));
+
+            foreach (var set in details.Where(s => s is not null).Select(s => s!))
+            {
+                string status;
+                if (InventoryService.CanBuildSet(set, dcInventory))
+                {
+                    _alreadyBuildable++;
+                    status = "direct";
+                }
+                else if (ColourSubstitutionService.CanBuildWithColourSubstitution(set, dcInventory))
+                {
+                    _newSets.Add(set);
+                    status = "swap";
+                }
+                else
+                {
+                    _impossible++;
+                    status = "none";
+                }
+                _allSets.Add((set.Name, status));
+            }
+
+            _allSets = _allSets.OrderBy(r => r.Status == "direct" ? 0 : r.Status == "swap" ? 1 : 2)
+                               .ThenBy(r => r.Name)
+                               .ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

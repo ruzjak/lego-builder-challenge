@@ -1,0 +1,143 @@
+@page "/custom-build"
+@rendermode InteractiveServer
+@inject LegoApiClient Api
+
+<PageTitle>Custom Build – megabuilder99</PageTitle>
+
+<div class="page-header">
+    <h1>Custom Build Planner</h1>
+    <p>What is the largest set <strong>megabuilder99</strong> can design so at least 50% of users could complete it?</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-spinner">
+        <div class="spinner-border" role="status"></div>
+        <span>Analysing all user inventories…</span>
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-3">
+            <div class="stat-box">
+                <div class="stat-value">@_totalUsers</div>
+                <div class="stat-label">Other users analysed</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div class="stat-box">
+                <div class="stat-value">@_threshold</div>
+                <div class="stat-label">Users needed (≥50%)</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div class="stat-box">
+                <div class="stat-value">@_pieceTypes</div>
+                <div class="stat-label">Distinct piece types</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div class="stat-box">
+                <div class="stat-value">@_totalPieces</div>
+                <div class="stat-label">Total pieces</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-card">
+        <h5 class="fw-semibold mb-3">Top pieces by available quantity</h5>
+        <p class="text-muted small mb-3">
+            Each row shows the maximum quantity megabuilder99 could include and still have
+            at least @_threshold users able to supply it.
+        </p>
+        <table class="table table-sm table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Piece ID</th>
+                    <th>Colour</th>
+                    <th class="text-end">Max Qty</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _topPieces)
+                {
+                    <tr>
+                        <td><code>@row.PieceId</code></td>
+                        <td><code>@row.ColorId</code></td>
+                        <td class="text-end fw-semibold">@row.Qty</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (_pieceTypes > 20)
+        {
+            <p class="text-muted small">Showing top 20 of @_pieceTypes piece types.</p>
+        }
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private int _totalUsers, _threshold, _pieceTypes, _totalPieces;
+    private List<(string PieceId, string ColorId, int Qty)> _topPieces = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var mbSummary = await Api.GetUserByUsernameAsync("megabuilder99");
+            var mbUser = await Api.GetUserByIdAsync(mbSummary!.Id);
+            var mbInventory = InventoryService.BuildInventoryLookup(mbUser!);
+
+            var allUsers = await Api.GetUsersAsync();
+            var otherInventories = new System.Collections.Concurrent.ConcurrentBag<Dictionary<(string, string), int>>();
+
+            await Parallel.ForEachAsync(allUsers.Where(u => u.Id != mbSummary.Id), async (u, _) =>
+            {
+                var detail = await Api.GetUserByIdAsync(u.Id);
+                if (detail is not null)
+                    otherInventories.Add(InventoryService.BuildInventoryLookup(detail));
+            });
+
+            var inventories = otherInventories.ToList();
+            _totalUsers = inventories.Count;
+            _threshold = (int)Math.Ceiling(inventories.Count * 0.5);
+
+            var result = new Dictionary<(string, string), int>();
+            foreach (var (key, mbCount) in mbInventory)
+            {
+                int lo = 1, hi = mbCount, best = 0;
+                while (lo <= hi)
+                {
+                    int mid = (lo + hi) / 2;
+                    int enough = inventories.Count(inv => inv.TryGetValue(key, out var c) && c >= mid);
+                    if (enough >= _threshold) { best = mid; lo = mid + 1; }
+                    else hi = mid - 1;
+                }
+                if (best > 0) result[key] = best;
+            }
+
+            _pieceTypes = result.Count;
+            _totalPieces = result.Values.Sum();
+            _topPieces = result
+                .OrderByDescending(kv => kv.Value)
+                .Take(20)
+                .Select(kv => (kv.Key.Item1, kv.Key.Item2, kv.Value))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

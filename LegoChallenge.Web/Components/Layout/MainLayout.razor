@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <img src="https://assets.lego.com/logos/v4.5.0/brand-lego.svg" alt="LEGO" />
+    </div>
+    <nav>
+        <div class="nav-label">Tasks</div>
+        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Buildable Sets</NavLink>
+        <div class="nav-label">Stretch Goals</div>
+        <NavLink class="nav-link" href="/collaboration">Collaboration</NavLink>
+        <NavLink class="nav-link" href="/custom-build">Custom Build</NavLink>
+        <NavLink class="nav-link" href="/colour-swap">Colour Substitution</NavLink>
+    </nav>
+</div>
+
+<div class="main-content">
+    @Body
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">&#10006;</span>
+</div>

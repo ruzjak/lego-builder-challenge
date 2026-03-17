@@ -1,0 +1,117 @@
+@page "/collaboration"
+@rendermode InteractiveServer
+@inject LegoApiClient Api
+
+<PageTitle>Collaboration – tropical-island</PageTitle>
+
+<div class="page-header">
+    <h1>Collaboration</h1>
+    <p>Who can <strong>landscape-artist</strong> team up with to build <strong>tropical-island</strong>?</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-spinner">
+        <div class="spinner-border" role="status"></div>
+        <span>Checking all user inventories…</span>
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_totalPiecesNeeded</div>
+                <div class="stat-label">Pieces needed for tropical-island</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_laPieceCount</div>
+                <div class="stat-label">Pieces landscape-artist has</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-box">
+                <div class="stat-value">@_collaborators.Count</div>
+                <div class="stat-label">Valid collaborators found</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-card">
+        <h5 class="fw-semibold mb-3">Users who can fill the gap</h5>
+        @if (_collaborators.Count == 0)
+        {
+            <p class="text-muted">No single user can combine with landscape-artist to complete the build.</p>
+        }
+        else
+        {
+            @foreach (var name in _collaborators.Order())
+            {
+                <span class="user-badge">@name</span>
+            }
+        }
+
+        <hr class="my-4" />
+        <h5 class="fw-semibold mb-3">Users checked</h5>
+        <div>
+            @foreach (var name in _allOthers)
+            {
+                var isMatch = _collaborators.Contains(name);
+                <span class="user-badge" style="@(isMatch ? "" : "background:#f8f9fa; border-color:#dee2e6; color:#999;")">
+                    @name @(isMatch ? "✓" : "")
+                </span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private List<string> _collaborators = [];
+    private List<string> _allOthers = [];
+    private int _totalPiecesNeeded;
+    private int _laPieceCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var laSummary = await Api.GetUserByUsernameAsync("landscape-artist");
+            var laUser = await Api.GetUserByIdAsync(laSummary!.Id);
+            var laInventory = InventoryService.BuildInventoryLookup(laUser!);
+            _laPieceCount = laUser!.BrickCount;
+
+            var sets = await Api.GetSetsAsync();
+            var target = sets.FirstOrDefault(s => s.Name == "tropical-island");
+            var targetDetail = await Api.GetSetByIdAsync(target!.Id);
+            _totalPiecesNeeded = targetDetail!.Pieces.Sum(p => p.Quantity);
+
+            var allUsers = await Api.GetUsersAsync();
+            _allOthers = allUsers.Where(u => u.Id != laSummary.Id).Select(u => u.Username).Order().ToList();
+
+            await Parallel.ForEachAsync(allUsers.Where(u => u.Id != laSummary.Id), async (u, _) =>
+            {
+                var other = await Api.GetUserByIdAsync(u.Id);
+                if (other is null) return;
+                var combined = InventoryService.MergeInventories(laInventory, InventoryService.BuildInventoryLookup(other));
+                if (InventoryService.CanBuildSet(targetDetail, combined))
+                    lock (_collaborators) { _collaborators.Add(u.Username); }
+            });
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
