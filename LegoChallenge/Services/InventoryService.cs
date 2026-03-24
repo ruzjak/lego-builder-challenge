@@ -39,6 +39,25 @@ public class InventoryService
     }
 
     /// <summary>
+    /// Returns the list of pieces the user is missing to build the set.
+    /// Each entry is (pieceId, colorId, quantityMissing).
+    /// </summary>
+    public static List<(string PieceId, string ColorId, int Missing)> GetMissingPieces(
+        SetDetail set,
+        Dictionary<(string PieceId, string ColorId), int> inventory)
+    {
+        var missing = new List<(string, string, int)>();
+        foreach (var piece in set.Pieces)
+        {
+            var key = (piece.Part.DesignId, piece.Part.Material.ToString());
+            inventory.TryGetValue(key, out var available);
+            if (available < piece.Quantity)
+                missing.Add((piece.Part.DesignId, piece.Part.Material.ToString(), piece.Quantity - available));
+        }
+        return missing;
+    }
+
+    /// <summary>
     /// Merges two inventories into a new combined lookup.
     /// </summary>
     public static Dictionary<(string PieceId, string ColorId), int> MergeInventories(

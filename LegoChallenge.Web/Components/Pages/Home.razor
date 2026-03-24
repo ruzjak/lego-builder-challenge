@@ -62,15 +62,52 @@ else
 
         <hr class="my-4" />
         <h5 class="fw-semibold mb-3">Cannot Build</h5>
+        <p class="text-muted small mb-2">Click a set to see which bricks are missing.</p>
         <div>
             @foreach (var s in _cannotBuild)
             {
-                <span class="set-badge" style="background:#f8f9fa; border-color:#dee2e6; color:#999;">
+                var set = s;
+                <span class="set-badge" role="button"
+                      style="background:#f8f9fa; border-color:#dee2e6; color:#999; cursor:pointer;"
+                      @onclick="() => ToggleMissing(set)">
                     <span>@s.Name</span>
                     <span class="set-num">@s.SetNumber</span>
                 </span>
             }
         </div>
+
+        @if (_selectedSet is not null)
+        {
+            <div class="mt-4 p-3 border rounded bg-white">
+                <h6 class="fw-semibold mb-3">Missing bricks for <em>@_selectedSet.Name</em></h6>
+                @if (_missingPieces.Count == 0)
+                {
+                    <p class="text-muted small">No missing pieces found.</p>
+                }
+                else
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Piece ID</th>
+                                <th>Colour</th>
+                                <th class="text-end">Missing Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (pieceId, colorId, missing) in _missingPieces)
+                            {
+                                <tr>
+                                    <td><code>@pieceId</code></td>
+                                    <td><code>@colorId</code></td>
+                                    <td class="text-end text-danger fw-semibold">@missing</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
     </div>
 }
 
@@ -81,6 +118,21 @@ else
     private List<SetDetail> _buildable = [];
     private List<SetDetail> _cannotBuild = [];
     private int _totalSets;
+    private Dictionary<(string, string), int> _inventory = [];
+    private SetDetail? _selectedSet;
+    private List<(string PieceId, string ColorId, int Missing)> _missingPieces = [];
+
+    private void ToggleMissing(SetDetail set)
+    {
+        if (_selectedSet?.Id == set.Id)
+        {
+            _selectedSet = null;
+            _missingPieces = [];
+            return;
+        }
+        _selectedSet = set;
+        _missingPieces = InventoryService.GetMissingPieces(set, _inventory);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,7 +140,8 @@ else
         {
             var summary = await Api.GetUserByUsernameAsync("brickfan35");
             _user = await Api.GetUserByIdAsync(summary!.Id);
-            var inventory = InventoryService.BuildInventoryLookup(_user!);
+            _inventory = InventoryService.BuildInventoryLookup(_user!);
+            var inventory = _inventory;
 
             var sets = await Api.GetSetsAsync();
             _totalSets = sets.Count;
